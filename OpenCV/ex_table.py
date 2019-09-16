@@ -151,9 +151,9 @@ def openOperation(img, imgsize, select):  # 열림 연산 // select : 0(vertical
         scale = 30
 
     size = imgsize / scale
-    if select == 0:
+    if select == 1:
         window = np.ones((int(size), 1), np.uint8)
-    elif select == 1:
+    elif select == 0:
         window = np.ones((1, int(size)), np.uint8)
 
     # para1 : 이미지, para2 : 커널, para3 : erode 반복 횟수
@@ -170,6 +170,25 @@ def openOperation2(img, select):  # 열림 연산 // select : 0(vertical), 1(hor
 
     return img
 
+def openOperation3(img, imgsize, select):
+    # 이미지 크기에 따른 scale 값 지정
+    if imgsize > 800:
+        scale = 30
+    else:
+        scale = 30
+
+    size = imgsize / scale
+    if select == 0:
+        window = np.ones((int(size), 1), np.uint8)
+    elif select == 1:
+        window = np.ones((1, int(size)), np.uint8)
+
+    # cv2.imshow("minus_1", img)
+
+    # para1 : 이미지, para2 : 커널, para3 : dilate 반복 횟수
+    img = cv2.dilate(img, window, iterations=1)
+
+    return img
 
 def CheckLine(horizontal_img, x1, x2, y):
     xpos_avg = int((x1 + x2) / 2)  # 사각형의 x1, x2의 평균
@@ -203,6 +222,23 @@ def GetBlockList(gray, rows, cols):
 
     vertical = openOperation(gray, rows, 0)
     horizontal = openOperation(gray, cols, 1)
+
+    cv2.imshow("vertical", ~vertical)
+    cv2.imshow("horizontal", ~horizontal)
+
+    # [OCR] 데이터 전처리 3 - 선 없애기
+    gray = gray - vertical
+    gray = gray - horizontal
+    gray = ~gray
+
+    #cv2.imshow("vertical", ~vertical)
+    #cv2.imshow("horizontal", ~horizontal)
+    #cv2.imshow("horizontal", ~gray)
+
+    # aaa = openOperation3(vertical, cols, 0)
+
+    # cv2.imshow("aaa", aaa)
+    cv2.imshow("changeGray", gray)
 
     vertical = openOperation2(vertical, 0)
     horizontal = openOperation2(horizontal, 1)
@@ -284,9 +320,9 @@ def GetBlockList(gray, rows, cols):
     # result = cv2.resize(result, None, fx=0.7, fy=0.7, interpolation=cv2.INTER_AREA)
     vertical = cv2.dilate(vertical, np.ones((1, 2), np.uint8), iterations=1)
 
-    #cv2.imshow('result', result)
-    # cv2.imshow('v', vertical)
-    # cv2.imshow('h', horizontal)
+    cv2.imshow('result', result)
+    cv2.imshow('v', R_vertical)
+    cv2.imshow('h', R_horizontal)
     real_corner.sort(key=lambda corner: corner[0])
 
     arr = []
@@ -360,7 +396,7 @@ def GetBlockList(gray, rows, cols):
         i += 1
     #print(len(block_point))
 
-    return block_point
+    return block_point, gray
 
 def ImgtoPadding(img, psize) : # psize : padding size
     rows, cols = img.shape
@@ -384,15 +420,31 @@ def StartTableExtract(img_path):
     #print(cv2.__version__)
 
     img_file = img_path
+    # [OCR] 데이터 전처리1 - grayScale
     img = cv2.imread(img_file, cv2.IMREAD_GRAYSCALE)
     rows, cols = img.shape  # 이미지의 가로, 세로 길이
-    if rows > 2000 and cols > 2000: 
+    if rows > 2000 and cols > 2000:
         img = cv2.resize(img, None, fx=0.4, fy=0.4, interpolation=cv2.INTER_AREA)
     rows, cols = img.shape  # 이미지의 가로, 세로 길이
-    
+
+    # [OCR] 데이터 전처리2- 이진화 (뒤 배경이 없어짐)
+    ret, dst = cv2.threshold(img, 220, 255, cv2.THRESH_BINARY)
+    cv2.imshow("histogram", dst)
+
     gray = cv2.adaptiveThreshold(~img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, -2)
-    block_point = GetBlockList(gray, rows, cols)  # <-- 완성
+    block_point, img = GetBlockList(gray, rows, cols)  # <-- 완성
     #print(block_point)
+
+    # [OCR] 데이터 전처리 4 - 배경 없는 것과 있는 것의 or연산
+    img = cv2.bitwise_or(dst, img)
+    #cv2.imshow("bitwise",img)
+
+    # [OCR] 데이터 전처리 5 - 글자 복원
+    kernel = np.ones((2,1), np.uint8)
+    img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
+    #cv2.imshow("bitwise_morphology",mmImg)
+
+
 
     #########여기서부턴 엑셀에 넣는 거 ####### 함수 아직 안만들었음
     ######################################
@@ -409,6 +461,12 @@ def StartTableExtract(img_path):
 
     matching_col = ['A', 'B', 'C', 'D', 'E', 'F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF','AG','AH','AI','AJ','AK']
     img_list = []
+    cv2.imshow("origin", img)
+
+    #데이터 전처리 - 침식,팽창(의미 없음)
+    # kernel = np.ones((1,1), np.uint8)
+    # mmImg = cv2.morphologyEx(dst, cv2.MORPH_OPEN, kernel)
+    # cv2.imshow("monoPology", mmImg)
     #
     # ws.merge_cells(start_row=2, start_column=4, end_row=8, end_column=6)
     numb=0
