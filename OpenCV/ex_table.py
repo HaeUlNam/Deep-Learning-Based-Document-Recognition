@@ -151,9 +151,9 @@ def openOperation(img, imgsize, select):  # 열림 연산 // select : 0(vertical
         scale = 30
 
     size = imgsize / scale
-    if select == 1:
+    if select == 0:
         window = np.ones((int(size), 1), np.uint8)
-    elif select == 0:
+    elif select == 1:
         window = np.ones((1, int(size)), np.uint8)
 
     # para1 : 이미지, para2 : 커널, para3 : erode 반복 횟수
@@ -320,9 +320,9 @@ def GetBlockList(gray, rows, cols):
     # result = cv2.resize(result, None, fx=0.7, fy=0.7, interpolation=cv2.INTER_AREA)
     vertical = cv2.dilate(vertical, np.ones((1, 2), np.uint8), iterations=1)
 
-    cv2.imshow('result', result)
-    cv2.imshow('v', R_vertical)
-    cv2.imshow('h', R_horizontal)
+    # cv2.imshow('result', result)
+    # cv2.imshow('v', R_vertical)
+    # cv2.imshow('h', R_horizontal)
     real_corner.sort(key=lambda corner: corner[0])
 
     arr = []
@@ -429,7 +429,7 @@ def StartTableExtract(img_path):
 
     # [OCR] 데이터 전처리2- 이진화 (뒤 배경이 없어짐)
     ret, dst = cv2.threshold(img, 220, 255, cv2.THRESH_BINARY)
-    cv2.imshow("histogram", dst)
+    #cv2.imshow("histogram", dst)
 
     gray = cv2.adaptiveThreshold(~img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, -2)
     block_point, img = GetBlockList(gray, rows, cols)  # <-- 완성
@@ -440,9 +440,9 @@ def StartTableExtract(img_path):
     #cv2.imshow("bitwise",img)
 
     # [OCR] 데이터 전처리 5 - 글자 복원
-    kernel = np.ones((2,1), np.uint8)
-    img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
-    #cv2.imshow("bitwise_morphology",mmImg)
+    #kernel = np.ones((2,1), np.uint8)
+    #img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
+    #cv2.imshow("bitwise_morphology", img)
 
 
 
